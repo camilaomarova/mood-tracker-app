@@ -70,6 +70,20 @@ struct AnalyzeView: View {
                 ClockView(timeRangesData: timeRangesData)
                     .padding()
                 
+                VStack(alignment: .leading, spacing: 10) {
+                    LegendRow(label: "Energetic", color: Color(UIColor(red: 1.0, green: 0.843, blue: 0.0, alpha: 1.0)))
+                    LegendRow(label: "Focused", color: .orange)
+                    LegendRow(label: "Determined", color: .yellow)
+                    LegendRow(label: "Creative", color: .green)
+                    LegendRow(label: "Relaxed", color: .blue)
+                    LegendRow(label: "Stressed", color: .purple)
+                    LegendRow(label: "Satisfied", color: .cyan)
+                    LegendRow(label: "Overwhelmed", color: Color(red: 0.6, green: 0.2, blue: 0.8, opacity: 1.0))
+                    LegendRow(label: "Tired", color: .brown)
+                    LegendRow(label: "Unmotivated", color: .gray)
+                    LegendRow(label: "Angry", color: .black)
+                }
+                .padding()
             }
             .padding(.top, 20)
             .onAppear {
@@ -195,6 +209,20 @@ struct AnalyzeView: View {
     }
 }
 
+struct LegendRow: View {
+    var label: String
+    var color: Color
+
+    var body: some View {
+        HStack {
+            Circle()
+                .fill(color)
+                .frame(width: 15, height: 15)
+            Text(label)
+                .font(.headline)
+        }
+    }
+}
 
 struct SimpleLineChartView: View {
     let totalMinutesData: [String: Int]
