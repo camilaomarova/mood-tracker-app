@@ -69,19 +69,16 @@ struct AnalyzeView: View {
                 // Integrate the TimeRangesView here
                 ClockView(timeRangesData: timeRangesData)
                     .padding()
-                
+                                
+                // Add a legend for clock view moods
+                let timeRangesData: [String: [(String, String)]]
+
                 VStack(alignment: .leading, spacing: 10) {
-                    LegendRow(label: "Energetic", color: Color(UIColor(red: 1.0, green: 0.843, blue: 0.0, alpha: 1.0)))
-                    LegendRow(label: "Focused", color: .orange)
-                    LegendRow(label: "Determined", color: .yellow)
-                    LegendRow(label: "Creative", color: .green)
-                    LegendRow(label: "Relaxed", color: .blue)
-                    LegendRow(label: "Stressed", color: .purple)
-                    LegendRow(label: "Satisfied", color: .cyan)
-                    LegendRow(label: "Overwhelmed", color: Color(red: 0.6, green: 0.2, blue: 0.8, opacity: 1.0))
-                    LegendRow(label: "Tired", color: .brown)
-                    LegendRow(label: "Unmotivated", color: .gray)
-                    LegendRow(label: "Angry", color: .black)
+                    ForEach(getUniqueMoods(), id: \.self) { mood in
+                        if let color = color(for: mood) {
+                            LegendRow(label: mood, color: color)
+                        }
+                    }
                 }
                 .padding()
             }
@@ -90,6 +87,10 @@ struct AnalyzeView: View {
                 fetchData()
             }
         }
+    }
+    
+    private func getUniqueMoods() -> [String] {
+        return Array(Set(timeRangesData.keys.flatMap { $0 }))
     }
     
     private func angle(for time: String) -> Angle {
@@ -126,7 +127,7 @@ struct AnalyzeView: View {
         return CGPoint(x: centerX + mirroredX, y: centerY + y)
     }
     
-    private func color(for mood: String) -> Color {
+    private func color(for mood: String) -> Color? {
         // Assign a unique color for each mood or use a predefined color scheme
         // Modify this method based on your color preferences
         switch mood {
@@ -187,19 +188,79 @@ struct AnalyzeView: View {
                 let resultString = String(data: data, encoding: .utf8)
                 
                 let (totalMinutesData, timeRangesData) = parseData(from: response)
+                                
+                let formattedResult = formatAnalysisResult(resultString ?? "")
+
+                print(formattedResult)
                 
                 DispatchQueue.main.async {
                     self.totalMinutesData = totalMinutesData
                     self.timeRangesData = timeRangesData
-                    self.analysisResult = resultString ?? ""
+                    self.analysisResult = formattedResult
                 }
             } catch {
                 print("Error decoding JSON:", error)
             }
         }.resume()
     }
-                    
     
+    func cleanJSONString(_ jsonString: String) -> String? {
+        do {
+            // Convert the string to data
+            if let jsonData = jsonString.data(using: .utf8) {
+
+                // Try to decode the data
+                if let cleanedString = String(data: jsonData, encoding: .utf8) {
+                    return cleanedString
+                }
+            }
+        } catch {
+            print("Error cleaning JSON string:", error)
+        }
+        return nil
+    }
+    
+    func formatAnalysisResult(_ resultString: String) -> String {
+        guard let cleanedString = cleanJSONString(resultString) else {
+            return "Error cleaning JSON string"
+        }
+
+        var formattedString = ""
+
+        do {
+            // Parse the cleaned JSON string
+            if let data = cleanedString.data(using: .utf8),
+               let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+
+                // Iterate through each key-value pair in the JSON
+                for (key, value) in json {
+                    formattedString += "\(key):\n"
+
+                    // Check if the value is a dictionary
+                    if let dictionaryValue = value as? [String: Any] {
+                        for (innerKey, innerValue) in dictionaryValue {
+                            formattedString += "\(innerKey): \(innerValue),\n"
+                        }
+                    } else if let arrayValue = value as? [[String: Any]] {
+                        // Check if the value is an array of dictionaries
+                        for dict in arrayValue {
+                            for (innerKey, innerValue) in dict {
+                                formattedString += "\(innerKey): \(innerValue),\n"
+                            }
+                        }
+                    } else if let stringValue = value as? String {
+                        // Check if the value is a string
+                        formattedString += "\(stringValue)\n"
+                    }
+                }
+            }
+        } catch {
+            print("Error parsing JSON:", error)
+        }
+
+        return formattedString
+    }
+
     private func parseData(from response: Response) -> ([String: Int], [String: [(String, String)]]) {
         // Parse your response and extract the necessary data
         totalMinutesData = response.totalMinutesSpentInAMood
